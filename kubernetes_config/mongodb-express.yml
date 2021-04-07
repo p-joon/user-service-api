@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-express
+  labels:
+    app: mongodb-express
+# specification for the deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-express
+  # blueprint for pods
+  template:
+    metadata:
+      labels:
+        app: mongodb-express
+    # specification for the pod
+    spec:
+      containers:
+      - name: mongodb-express
+        image: mongo-express
+        ports:
+        - containerPort: 8081
+        env:
+        # Deployment Config File is checked into repository,
+        # so avoid putting username and password here
+        - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-username
+        - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-password
+        - name: ME_CONFIG_MONGODB_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: mongodb-configmap
+              key: database_url          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-express-service
+spec:
+  selector:
+    app: mongodb-express
+  type: LoadBalancer # add this line to make it an external service
+  ports:
+    - protocol: TCP
+      port: 8081 # service port 
+      targetPort: 8081 # pod port
+      nodePort: 30000 # port where the external ip will expose (MUST be 30000-32767)
